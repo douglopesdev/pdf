@@ -7,7 +7,14 @@ import svelteConfig from './svelte.config.js';
 
 export default defineConfig(
   {
-    ignores: ['dist/', 'coverage/', 'node_modules/', 'playwright-report/', 'test-results/'],
+    ignores: [
+      'dist/',
+      'coverage/',
+      'node_modules/',
+      'playwright-report/',
+      'test-results/',
+      'docs/',
+    ],
   },
   js.configs.recommended,
   ts.configs.recommended,
