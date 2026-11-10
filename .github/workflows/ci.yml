@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Tipos, lint, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar qpdf (valida os PDFs gerados nos testes)
+        run: sudo apt-get update && sudo apt-get install -y qpdf
+
+      - name: Checar tipos (svelte-check)
+        run: pnpm check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Formatação
+        run: pnpm format:check
+
+      - name: Testes de unidade
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Tamanho do JavaScript
+        run: pnpm size

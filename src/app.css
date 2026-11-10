@@ -1,0 +1,120 @@
+/*
+ * Tokens de tema (mesmos valores dos mockups).
+ * Claro é o padrão; o escuro vem do sistema ou de data-theme="dark".
+ */
+:root {
+  --bg: #ffffff;
+  --surface: #f4f4f5;
+  --ink: #0a0a0a;
+  --muted: #5b5b63;
+  --line: #e4e4e7;
+  --line-strong: #c9c9cf;
+  --btn: #0a0a0a;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(10 10 10 / 0.42);
+
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --tap: 44px;
+  --gutter: 20px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0a0a0a;
+    --surface: #18181b;
+    --ink: #fafafa;
+    --muted: #a1a1aa;
+    --line: #27272a;
+    --line-strong: #3f3f46;
+    --btn: #fafafa;
+    --btn-ink: #0a0a0a;
+    --ok: #4ade80;
+    --ok-bg: #052e16;
+    --danger: #ff7b82;
+    --scrim: rgb(0 0 0 / 0.62);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0a0a0a;
+  --surface: #18181b;
+  --ink: #fafafa;
+  --muted: #a1a1aa;
+  --line: #27272a;
+  --line-strong: #3f3f46;
+  --btn: #fafafa;
+  --btn-ink: #0a0a0a;
+  --ok: #4ade80;
+  --ok-bg: #052e16;
+  --danger: #ff7b82;
+  --scrim: rgb(0 0 0 / 0.62);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
