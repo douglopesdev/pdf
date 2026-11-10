@@ -61,12 +61,18 @@ src/
 ├─ components/                   (Fase 2) Button, PageCard, Segmented, Toast…
 ├─ sw.ts                         (Fase 3) service worker
 └─ lib/
-   ├─ core/                      (Fase 1) lógica pura, sem Svelte nem DOM
-   │  ├─ pdf-writer.ts           monta o PDF a partir de JPEGs
+   ├─ core/                      lógica pura, sem Svelte nem DOM
+   │  ├─ options.ts              PdfOptions, padrões, tabela de qualidade, limite de 60
+   │  ├─ errors.ts               ImageError (pula a imagem) e ConvertError (para tudo)
+   │  ├─ format.ts               identifica o formato pelos primeiros bytes (HEIC incluso)
    │  ├─ jpeg.ts                 lê dimensões e orientação EXIF de um JPEG
    │  ├─ layout.ts               tamanho da página, margem, encaixe da imagem
-   │  └─ raster.ts               decodifica, gira e redimensiona (usa OffscreenCanvas)
-   ├─ worker/convert.worker.ts   (Fase 1) roda o raster + pdf-writer fora da UI
+   │  ├─ raster.ts               decodifica, gira e redimensiona (usa OffscreenCanvas)
+   │  ├─ pdf-writer.ts           monta o PDF a partir de JPEGs
+   │  └─ convert.ts              orquestra tudo; recebe o rasterizador por parâmetro
+   ├─ worker/
+   │  ├─ protocol.ts             tipos das mensagens (a interface importa só daqui)
+   │  └─ convert.worker.ts       roda o convert fora da UI; aceita { type: 'cancel' }
    ├─ state/
    │  └─ preferences.svelte.ts   tema e idioma; único dado salvo
    ├─ i18n/
@@ -77,7 +83,9 @@ src/
 public/
 ├─ theme-init.js                 aplica o tema salvo antes da primeira pintura
 └─ favicon.svg, robots.txt       robots bloqueia indexação (uso pessoal)
-tests/unit/                      Vitest; os fixtures de imagem vão em tests/fixtures/
+tests/unit/                      Vitest (ambiente node)
+tests/fixtures/                  imagens de 60 × 40 geradas por `pnpm fixtures` (versionadas)
+tests/helpers/                   leitura de fixtures, xref e o rasterizador de teste (sharp)
 docs/reference/                  material de referência, fora do build e do lint
 ```
 
@@ -105,8 +113,8 @@ docs/reference/                  material de referência, fora do build e do lin
 | Fase                    | Entrega                                                          | Portão                      | Situação                                                                                                 |
 | ----------------------- | ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | PR #1 aberto, CI verde. Falta o Douglas ativar Settings › Pages › Source: GitHub Actions e fazer o merge |
-| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Próxima                                                                                                  |
-| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | —                                                                                                        |
+| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | PR aberto (`feat/fase-1-nucleo`, em cima da Fase 0). O worker ainda não é usado pela interface           |
+| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Próxima                                                                                                  |
 | 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | —                                                                                                        |
 | 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | —                                                                                                        |
 
