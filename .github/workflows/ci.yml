@@ -29,6 +29,9 @@ jobs:
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
 
+      - name: Instalar qpdf (valida os PDFs gerados nos testes)
+        run: sudo apt-get update && sudo apt-get install -y qpdf
+
       - name: Checar tipos (svelte-check)
         run: pnpm check
 
