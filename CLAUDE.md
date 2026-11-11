@@ -34,7 +34,7 @@ Guia para o Claude Code trabalhar neste repositório. Leia inteiro antes de muda
 | Estilo               | CSS puro com os tokens de `src/app.css`. Sem Tailwind nem framework de CSS                                                                    |
 | Imagens (Fase 1)     | `createImageBitmap` + `OffscreenCanvas` dentro de um Web Worker                                                                               |
 | PDF (Fase 1)         | Gerador próprio em TS, sem dependência. Veja `docs/reference/pdf-writer-prototype.js`                                                         |
-| Testes               | Vitest (unidade). Playwright (e2e) entra na Fase 4                                                                                            |
+| Testes               | Vitest (unidade), Playwright + axe (ponta a ponta) e Lighthouse CI                                                                            |
 | Qualidade            | svelte-check, ESLint (flat config), Prettier                                                                                                  |
 | Gerenciador          | pnpm 10 (`packageManager` no package.json)                                                                                                    |
 
@@ -44,7 +44,9 @@ Guia para o Claude Code trabalhar neste repositório. Leia inteiro antes de muda
 pnpm install
 pnpm dev          # http://localhost:5173/pdf/
 pnpm dev --host   # para abrir no celular pela rede local
-pnpm verify       # tudo que o CI roda: check, lint, format:check, test, build, size
+pnpm verify       # check, lint, format:check, test, build, test:e2e, size
+pnpm test:e2e     # Playwright contra o build (rode `pnpm build` antes)
+pnpm lighthouse   # Lighthouse CI contra o build; no CI roda depois do verify
 ```
 
 Antes de cada commit, rode `pnpm format` e depois `pnpm verify`. O CI falha com qualquer aviso do svelte-check (`--fail-on-warnings`) e com arquivo fora do padrão do Prettier.
@@ -102,6 +104,7 @@ public/
 ├─ icons/                        ícones do PWA, gerados por `pnpm icons` (versionados)
 └─ favicon.svg, robots.txt       robots bloqueia indexação (uso pessoal)
 tests/unit/                      Vitest (ambiente node)
+tests/e2e/                       Playwright (Pixel 7 e Galaxy A55) contra o `vite preview`
 tests/fixtures/                  imagens de 60 × 40 geradas por `pnpm fixtures` (versionadas)
 tests/helpers/                   leitura de fixtures, xref e o rasterizador de teste (sharp)
 docs/reference/                  material de referência, fora do build e do lint
@@ -128,13 +131,13 @@ docs/reference/                  material de referência, fora do build e do lin
 
 ## Situação atual
 
-| Fase                    | Entrega                                                          | Portão                      | Situação                                                                                               |
-| ----------------------- | ---------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | Concluída. Na `main`, site no ar                                                                       |
-| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Concluída. Na `main`                                                                                   |
-| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Branch `feat/fase-2-interface` enviada, sem PR. Falta testar o toque no Android                        |
-| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | Branch `feat/fase-3-pwa` enviada (em cima da Fase 2). Falta instalar e compartilhar em um Android real |
-| 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | Próxima                                                                                                |
+| Fase                    | Entrega                                                          | Portão                      | Situação                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | Concluída. Na `main`, site no ar                                                                         |
+| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Concluída. Na `main`                                                                                     |
+| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Concluída. Na `main`                                                                                     |
+| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | Na `main` e publicada. Falta confirmar a instalação e o Compartilhar em um Android real                  |
+| 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | Parte automática pronta (e2e, axe, Lighthouse no CI). Faltam os testes manuais do Douglas e a tag v1.0.0 |
 
 ## Fase 1 · Núcleo de conversão (especificação)
 
@@ -221,3 +224,25 @@ Notas da implementação:
 - O terminal é o **cmd**. Para trocar de unidade, use `cd /d D:\Projects\Pdf`; só `cd D:\...` não troca.
 - Ao passar comandos para ele, use a sintaxe do cmd (ou avise quando for PowerShell).
 - Ele programa em TypeScript, Svelte, Bits UI e Rust no dia a dia (mantém um CRM e um portal B2B).
+
+## Fase 4 · Aparelhos e v1.0
+
+**Automático (roda no CI)**
+
+- `tests/e2e/flow.spec.ts`: escolher, girar, remover, reordenar (teclado e toque longo de verdade, pelo protocolo do Chromium), ajustes, HEIC, limite de 60, baixar o PDF e o Voltar do telefone.
+- `tests/e2e/screens.spec.ts`: todas as telas em pt-BR e en, claro e escuro, com axe (WCAG 2.1 AA, inclui contraste), alvos de 44 px e larguras de 360, 390, 412 e 430 px.
+- `tests/e2e/offline.spec.ts`: fluxo inteiro sem rede, nenhuma requisição para outra origem, CSP bloqueando, nada guardado além de `pdf.prefs`, manifest e share target.
+- Lighthouse CI (`lighthouserc.json`): desempenho ≥ 0,90, acessibilidade = 1 e boas práticas ≥ 0,95. SEO não é cobrado: o app bloqueia indexação de propósito.
+
+No Windows do Douglas, o Kaspersky injeta um script nas páginas HTTP de `localhost` e reescreve a CSP. Por isso o `pnpm lighthouse` local acusa "Does not use HTTPS" e erros de CSP no console que não existem no CI nem em produção. Vale o resultado do CI.
+
+**Manual (só nos aparelhos)**
+
+1. Instalar pelo Chrome em cada um dos 4 telefones e abrir em modo avião.
+2. Galeria › Compartilhar › PDF, no Chrome e no Brave (risco conhecido do Brave).
+3. Segurar e arrastar, câmera, Compartilhar e Salvar em Downloads.
+4. A26 5G: abrir em menos de 1 s depois de instalado; 10 fotos de 12 MP em menos de 8 s na qualidade Média.
+5. M52: 60 imagens sem travar.
+6. TalkBack: percorrer as 6 telas e conferir que todo botão é anunciado.
+
+A tag `v1.0.0` (e a versão 1.0.0 no package.json) só sai depois que esses seis itens passarem.

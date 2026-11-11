@@ -62,7 +62,8 @@
         <span class="grip" aria-hidden="true"></span>
         <header>
           <Dialog.Title class="sheet-title">{t.options.title}</Dialog.Title>
-          <Dialog.Close class="icon-btn" aria-label={t.common.close}>
+          <!-- type="button": dentro do <form>, o padrão seria enviar e aplicar. -->
+          <Dialog.Close type="button" class="icon-btn" aria-label={t.common.close}>
             <Icon name="close" size={18} stroke={2} />
           </Dialog.Close>
         </header>
