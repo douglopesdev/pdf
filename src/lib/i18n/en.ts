@@ -93,6 +93,10 @@ export const en: Messages = {
     installed: 'Installed on home screen',
     version: 'PDF {v}',
   },
+  update: {
+    available: 'New version available',
+    apply: 'Update',
+  },
   toast: {
     limit: 'Up to {n} images per PDF. The rest were left out.',
     noImages: 'No image could be read. Try other photos.',

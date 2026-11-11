@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Toast from './components/Toast.svelte';
+  import UpdateBanner from './components/UpdateBanner.svelte';
   import { MAX_IMAGES } from './lib/core/options';
   import { messages, resolveLang } from './lib/i18n';
+  import { takeSharedFiles } from './lib/platform/share-target';
   import { prefs } from './lib/state/preferences.svelte';
   import { session, type ToastKind } from './lib/state/session.svelte';
+  import { appUpdate } from './lib/state/update.svelte';
   import { fill } from './lib/text';
   import Arrange from './screens/Arrange.svelte';
   import Done from './screens/Done.svelte';
@@ -22,6 +26,14 @@
     const root = document.documentElement;
     if (prefs.theme === 'auto') delete root.dataset.theme;
     else root.dataset.theme = prefs.theme;
+  });
+
+  onMount(() => {
+    appUpdate.start();
+    // Aberto pelo Compartilhar da galeria: as imagens já vêm escolhidas.
+    void takeSharedFiles().then((files) => {
+      if (files.length > 0) session.addFiles(files);
+    });
   });
 
   const toastText = $derived.by(() => {
@@ -104,6 +116,11 @@
     onfiles={(files) => session.addFiles(files)}
     onsettings={() => (session.screen = 'settings')}
   />
+{/if}
+
+<!-- Só no início: atualizar recarrega a página e perderia as páginas escolhidas. -->
+{#if appUpdate.available && session.screen === 'home'}
+  <UpdateBanner {t} onapply={() => appUpdate.apply()} onclose={() => appUpdate.dismiss()} />
 {/if}
 
 <Toast message={toastText} onclose={() => (session.toast = null)} />

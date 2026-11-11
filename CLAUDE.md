@@ -68,8 +68,9 @@ src/
 │  ├─ PageCard.svelte            miniatura numerada com Girar e Remover
 │  ├─ OptionsSheet.svelte        folha de ajustes do PDF (Dialog e Switch do Bits UI)
 │  ├─ Segmented.svelte           seletor de 3 opções (ToggleGroup do Bits UI)
-│  └─ Toast.svelte               aviso temporário no rodapé
-├─ sw.ts                         (Fase 3) service worker
+│  ├─ Toast.svelte               aviso temporário no rodapé
+│  └─ UpdateBanner.svelte        "Nova versão disponível" com o botão Atualizar
+├─ sw.ts                         service worker: precache do build e share target
 └─ lib/
    ├─ core/                      lógica pura, sem Svelte nem DOM
    │  ├─ options.ts              PdfOptions, padrões, tabela de qualidade, limite de 60
@@ -86,16 +87,19 @@ src/
    ├─ text.ts                    fill(), plural(), formatSize(), cleanFileName()
    ├─ state/
    │  ├─ preferences.svelte.ts   tema, idioma e últimas opções do PDF; único dado salvo
-   │  └─ session.svelte.ts       tela atual, páginas, progresso e PDF pronto (nada é salvo)
+   │  ├─ session.svelte.ts       tela atual, páginas, progresso e PDF pronto (nada é salvo)
+   │  └─ update.svelte.ts        registra o service worker e guarda o aviso de versão
    ├─ i18n/
    │  ├─ pt-BR.ts                fonte da verdade das chaves; exporta o tipo Messages
    │  ├─ en.ts                   tipado como Messages: faltar chave é erro de compilação
    │  └─ index.ts                resolveLang() e messages()
    └─ platform/
       ├─ converter.ts            cria o worker, repassa o progresso e cancela
-      └─ share.ts                Web Share API com arquivo; (Fase 3) share-target
+      ├─ share.ts                Web Share API com arquivo
+      └─ share-target.ts         imagens vindas do Compartilhar (usado pela página e pelo sw)
 public/
 ├─ theme-init.js                 aplica o tema salvo antes da primeira pintura
+├─ icons/                        ícones do PWA, gerados por `pnpm icons` (versionados)
 └─ favicon.svg, robots.txt       robots bloqueia indexação (uso pessoal)
 tests/unit/                      Vitest (ambiente node)
 tests/fixtures/                  imagens de 60 × 40 geradas por `pnpm fixtures` (versionadas)
@@ -124,13 +128,13 @@ docs/reference/                  material de referência, fora do build e do lin
 
 ## Situação atual
 
-| Fase                    | Entrega                                                          | Portão                      | Situação                                                                                                 |
-| ----------------------- | ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | Concluída. Na `main`, site no ar                                                                         |
-| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Concluída. Na `main`                                                                                     |
-| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Branch `feat/fase-2-interface` enviada. Falta testar o toque (arrastar, câmera, Compartilhar) no Android |
-| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | Próxima                                                                                                  |
-| 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | —                                                                                                        |
+| Fase                    | Entrega                                                          | Portão                      | Situação                                                                                               |
+| ----------------------- | ---------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | Concluída. Na `main`, site no ar                                                                       |
+| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Concluída. Na `main`                                                                                   |
+| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Branch `feat/fase-2-interface` enviada, sem PR. Falta testar o toque no Android                        |
+| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | Branch `feat/fase-3-pwa` enviada (em cima da Fase 2). Falta instalar e compartilhar em um Android real |
+| 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | Próxima                                                                                                |
 
 ## Fase 1 · Núcleo de conversão (especificação)
 
@@ -198,6 +202,13 @@ Notas da implementação:
 ## Fase 3 · PWA e Android (resumo)
 
 `vite-plugin-pwa` com `injectManifest` e `registerType: 'prompt'` (aviso "Nova versão disponível" com botão Atualizar). Manifest: `name` e `short_name` "PDF", `display: standalone`, `start_url` e `scope` `/pdf/`, cores dos tokens, ícones 192, 512 e maskable. O `share_target` aceita `image/*` via POST `multipart/form-data` em `/pdf/share-target`; o service worker recebe os arquivos e entrega à página por `postMessage`, sem gravar nada em disco. Precache de todo o build, exceto `.woff`, já que basta o `.woff2`.
+
+Notas da implementação:
+
+- O manifest fica no `vite.config.ts` (opção `manifest` do plugin). O service worker só existe no build: teste com `pnpm build` e `pnpm preview`, não com `pnpm dev`.
+- Share target: o service worker guarda os arquivos na memória, redireciona para `/pdf/?shared=1` e os entrega quando a página pede (`takeSharedFiles`). Se o navegador encerrar o service worker entre o POST e a página abrir, as imagens se perdem e o app abre na Início.
+- O aviso de versão só aparece na Início, porque atualizar recarrega a página.
+- O bundle inicial está em ~55 KB gzip, de 60: quase sem folga.
 
 ## Riscos conhecidos
 

@@ -1,6 +1,7 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
@@ -40,7 +41,55 @@ function cspMeta(): Plugin {
 export default defineConfig({
   // Publicado em https://douglopesdev.github.io/pdf/
   base: '/pdf/',
-  plugins: [svelte(), cspMeta()],
+  plugins: [
+    svelte(),
+    cspMeta(),
+    VitePWA({
+      // Service worker próprio (src/sw.ts); o plugin só injeta a lista de arquivos.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      // A versão nova espera o usuário tocar em Atualizar (src/lib/state/update.svelte.ts).
+      registerType: 'prompt',
+      injectRegister: false,
+      // Os ícones já entram no cache pelo globPatterns abaixo.
+      includeManifestIcons: false,
+      injectManifest: {
+        // Todo o build, menos os .woff: basta o .woff2.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+      },
+      manifest: {
+        id: '/pdf/',
+        name: 'PDF',
+        short_name: 'PDF',
+        description: 'Imagens em PDF direto no telefone. Sem anúncios, sem nuvem.',
+        lang: 'pt-BR',
+        display: 'standalone',
+        start_url: '/pdf/',
+        scope: '/pdf/',
+        // Os tokens --bg e --btn do tema claro (src/app.css).
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: 'icons/maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+        // Aparece no Compartilhar da galeria. Veja src/lib/platform/share-target.ts.
+        share_target: {
+          action: '/pdf/share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: { files: [{ name: 'images', accept: ['image/*'] }] },
+        },
+      },
+    }),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
