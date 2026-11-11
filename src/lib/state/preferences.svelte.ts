@@ -1,7 +1,14 @@
 import { DEFAULT_OPTIONS, type PdfOptions } from '../core/options';
 import type { LangPref } from '../i18n';
+import {
+  DEFAULT_CUSTOM,
+  THEMES,
+  parseCustomColors,
+  type CustomColors,
+  type ThemePref,
+} from '../theme';
 
-export type ThemePref = 'auto' | 'light' | 'dark';
+export type { ThemePref };
 
 /** Mesma chave lida por public/theme-init.js antes da primeira pintura. */
 export const PREFS_KEY = 'pdf.prefs';
@@ -11,6 +18,8 @@ interface StoredPrefs {
   lang: LangPref;
   /** Últimas opções usadas no PDF. */
   pdf: PdfOptions;
+  /** Cores do tema personalizado. Ficam guardadas mesmo com outro tema ativo. */
+  custom: CustomColors;
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -38,9 +47,10 @@ export function parsePrefs(raw: string | null): StoredPrefs {
     // JSON quebrado: volta tudo para o padrão.
   }
   return {
-    theme: oneOf(data.theme, ['auto', 'light', 'dark'], 'auto'),
+    theme: oneOf(data.theme, THEMES, 'auto'),
     lang: oneOf(data.lang, ['auto', 'pt-BR', 'en'], 'auto'),
     pdf: parsePdfOptions(data.pdf),
+    custom: parseCustomColors(data.custom),
   };
 }
 
@@ -60,19 +70,21 @@ class Preferences {
   theme = $state<ThemePref>('auto');
   lang = $state<LangPref>('auto');
   pdf = $state<PdfOptions>({ ...DEFAULT_OPTIONS });
+  custom = $state<CustomColors>({ ...DEFAULT_CUSTOM });
 
   constructor() {
     const stored = parsePrefs(readStorage());
     this.theme = stored.theme;
     this.lang = stored.lang;
     this.pdf = stored.pdf;
+    this.custom = stored.custom;
   }
 
   save(): void {
     try {
       localStorage.setItem(
         PREFS_KEY,
-        JSON.stringify({ theme: this.theme, lang: this.lang, pdf: this.pdf }),
+        JSON.stringify({ theme: this.theme, lang: this.lang, pdf: this.pdf, custom: this.custom }),
       );
     } catch {
       // Sem localStorage (modo restrito): a preferência vale só até fechar o app.

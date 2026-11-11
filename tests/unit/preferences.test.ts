@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_OPTIONS } from '../../src/lib/core/options';
 import { parsePrefs } from '../../src/lib/state/preferences.svelte';
+import { DEFAULT_CUSTOM } from '../../src/lib/theme';
 
-const DEFAULTS = { theme: 'auto', lang: 'auto', pdf: DEFAULT_OPTIONS };
+const DEFAULTS = { theme: 'auto', lang: 'auto', pdf: DEFAULT_OPTIONS, custom: DEFAULT_CUSTOM };
 
 describe('parsePrefs', () => {
   it('volta para o padrão quando não há nada salvo', () => {
@@ -33,6 +34,15 @@ describe('parsePrefs', () => {
     const stored = { pdf: { pageSize: 'a3', quality: 'high', margin: 'sim' } };
     expect(parsePrefs(JSON.stringify(stored)).pdf).toEqual({ ...DEFAULT_OPTIONS, quality: 'high' });
     expect(parsePrefs('{"pdf":"a4"}').pdf).toEqual(DEFAULT_OPTIONS);
+  });
+
+  it('lê os temas novos e as cores personalizadas', () => {
+    expect(parsePrefs('{"theme":"pink"}').theme).toBe('pink');
+    const stored = { theme: 'custom', custom: { bg: '#102030', ink: 'vermelho' } };
+    expect(parsePrefs(JSON.stringify(stored))).toMatchObject({
+      theme: 'custom',
+      custom: { ...DEFAULT_CUSTOM, bg: '#102030' },
+    });
   });
 
   it('devolve uma cópia: mudar o resultado não altera o padrão', () => {

@@ -44,3 +44,6 @@ await save('icon-192.png', 192, svg(16, 1));
 await save('icon-512.png', 512, svg(16, 1));
 // Maskable: fundo até a borda e desenho dentro dos 80% centrais.
 await save('maskable-512.png', 512, svg(0, 0.72));
+// Monocromático: só o desenho, em branco sobre transparente. O Android pinta
+// com as cores do sistema quando os "ícones temáticos" estão ligados.
+await save('monochrome-512.png', 512, svg(0, 0.72).replace(/<rect[^>]*\/>/, ''));

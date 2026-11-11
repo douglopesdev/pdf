@@ -14,12 +14,12 @@ Guia para o Claude Code trabalhar neste repositório. Leia inteiro antes de muda
 ## Princípios (valem para toda decisão)
 
 1. **Nada sai do aparelho.** Não existe backend. A conversão roda no navegador. Depois de carregado, o app não faz nenhuma requisição de rede. A CSP `default-src 'self'` (injetada no build pelo `vite.config.ts`) garante isso: não a afrouxe.
-2. **Nada fica guardado.** Só preferências (tema, idioma e, futuramente, as últimas opções do PDF) vão para o `localStorage`, na chave `pdf.prefs`. Imagens e PDFs nunca são gravados, nem em IndexedDB nem em cache.
+2. **Nada fica guardado.** Só preferências (tema, cores do tema personalizado, idioma e as últimas opções do PDF) vão para o `localStorage`, na chave `pdf.prefs`. Imagens e PDFs nunca são gravados, nem em IndexedDB nem em cache.
 3. **Zero anúncios, zero rastreamento, zero CDN.** Sem analytics nem SDK de terceiros. Fontes servidas pelo próprio app (`@fontsource`, só o subconjunto latino).
 4. **Abrir, escolher, converter.** No máximo três toques da galeria até o PDF pronto.
 5. **Offline.** Depois da primeira visita, abre sem internet (Fase 3).
 6. **Bilíngue.** pt-BR é o padrão; inglês automático quando o idioma do telefone começa com `en`.
-7. **Claro e escuro.** Segue o sistema, com opção de fixar um dos dois.
+7. **Temas.** Segue o claro ou o escuro do sistema, com opção de fixar um deles, um dos temas coloridos (Rosa, Azul, Verde, Roxo, Laranja) ou um tema com cores escolhidas pelo usuário.
 8. **Leve.** JS inicial abaixo de 60 KB gzip (`pnpm size` falha acima disso).
 
 ## Stack
@@ -55,7 +55,7 @@ Antes de cada commit, rode `pnpm format` e depois `pnpm verify`. O CI falha com 
 
 ```text
 src/
-├─ app.css                       tokens claro/escuro, reset, tipografia
+├─ app.css                       tokens de cor de cada tema, reset, tipografia
 ├─ main.ts                       fontes, CSS, mount
 ├─ App.svelte                    idioma, tema, troca de telas, Voltar do Android, avisos
 ├─ screens/                      uma tela por arquivo
@@ -87,8 +87,9 @@ src/
    │  ├─ protocol.ts             tipos das mensagens (a interface importa só daqui)
    │  └─ convert.worker.ts       roda o convert fora da UI; aceita { type: 'cancel' }
    ├─ text.ts                    fill(), plural(), formatSize(), cleanFileName()
+   ├─ theme.ts                   nomes dos temas e tokens, cores personalizadas, contraste
    ├─ state/
-   │  ├─ preferences.svelte.ts   tema, idioma e últimas opções do PDF; único dado salvo
+   │  ├─ preferences.svelte.ts   tema, cores personalizadas, idioma e opções do PDF; único dado salvo
    │  ├─ session.svelte.ts       tela atual, páginas, progresso e PDF pronto (nada é salvo)
    │  └─ update.svelte.ts        registra o service worker e guarda o aviso de versão
    ├─ i18n/
@@ -98,9 +99,10 @@ src/
    └─ platform/
       ├─ converter.ts            cria o worker, repassa o progresso e cancela
       ├─ share.ts                Web Share API com arquivo
+      ├─ theme-dom.ts            aplica o tema: data-theme, cores, barra de status, ícone da aba
       └─ share-target.ts         imagens vindas do Compartilhar (usado pela página e pelo sw)
 public/
-├─ theme-init.js                 aplica o tema salvo antes da primeira pintura
+├─ theme-init.js                 aplica o tema salvo antes da primeira pintura (repete nomes de theme.ts)
 ├─ icons/                        ícones do PWA, gerados por `pnpm icons` (versionados)
 └─ favicon.svg, robots.txt       robots bloqueia indexação (uso pessoal)
 tests/unit/                      Vitest (ambiente node)
@@ -115,7 +117,7 @@ docs/reference/                  material de referência, fora do build e do lin
 ## Convenções
 
 - **Textos de interface** ficam sempre em `src/lib/i18n`. Nunca escreva texto visível direto no componente. Toda chave nova entra em `pt-BR.ts` e `en.ts`; o teste `tests/unit/i18n.test.ts` confere as duas.
-- **Cores** só pelos tokens (`var(--bg)`, `var(--ink)`, `var(--btn)`…). Nada de hex no componente. O visual é preto e branco; a única cor semântica é o verde de sucesso (`--ok`, `--ok-bg`).
+- **Cores** só pelos tokens (`var(--bg)`, `var(--ink)`, `var(--btn)`…). Nada de hex, `rgb()` nem nome de cor no componente, e nada de texto translúcido (`opacity`): nos temas coloridos ele perde o contraste. Veja "Temas" abaixo.
 - **Acessibilidade:** alvo de toque de no mínimo 44 px (`var(--tap)`), `aria-label` em todo botão só com ícone, `<button>` e `<label>` reais, contraste AA nos dois temas, `prefers-reduced-motion` respeitado.
 - **Ícones:** SVG inline com `stroke="currentColor"`. Sem emoji e sem biblioteca de ícones.
 - **Layout:** mobile first, largura máxima de 520 px centralizada, `env(safe-area-inset-*)` nas bordas. Testar em 360, 390, 412 e 430 px.
@@ -246,3 +248,24 @@ No Windows do Douglas, o Kaspersky injeta um script nas páginas HTTP de `localh
 6. TalkBack: percorrer as 6 telas e conferir que todo botão é anunciado.
 
 A tag `v1.0.0` (e a versão 1.0.0 no package.json) só sai depois que esses seis itens passarem.
+
+## Temas
+
+Um tema é uma lista de valores para os mesmos 12 tokens de cor: `bg`, `surface`, `ink`, `muted`, `line`, `line-strong`, `btn`, `btn-ink`, `ok`, `ok-bg`, `danger` e `scrim` (mais as duas sombras). Trocar o tema não mexe em nenhuma tela.
+
+- **Temas prontos** ficam em `src/app.css`, um bloco `[data-theme='nome']` cada: `light`, `dark`, `pink`, `blue`, `green`, `purple` e `orange`. Os coloridos têm uma versão só (clara, com o botão na cor cheia).
+- **Automático** é a ausência de `data-theme`: vale o claro ou o escuro do sistema.
+- **Personalizado** (`custom`): as 12 cores ficam em `pdf.prefs` e entram como variáveis no `<html>`. O `scrim` é a cor escolhida a 50% de transparência. O app avisa quando um par de texto e fundo fica abaixo de 4,5:1, mas não impede.
+- O seletor `[data-theme]` vale em qualquer elemento, não só no `<html>`: é assim que as amostras das Configurações mostram as cores de cada tema.
+- O logotipo, o ícone da aba e a barra de status do Android seguem o tema. O ícone na tela inicial do telefone não: ele é fixo no manifest. Há um ícone `monochrome` para os "ícones temáticos" do Android 13+, sem confirmação de que o Chrome o usa.
+
+Para criar um tema pronto:
+
+1. Acrescente o bloco em `src/app.css`.
+2. Inclua o nome em `THEMES` (`src/lib/theme.ts`) e na lista de `public/theme-init.js`.
+3. Acrescente a tradução (`settings.themeNome`) e a opção em `src/screens/Settings.svelte`.
+4. Inclua o tema em `READY`, em `tests/e2e/themes.spec.ts`.
+
+`tests/unit/theme.test.ts` falha se o tema não definir todos os tokens, se algum par de texto e fundo ficar abaixo de AA ou se `theme-init.js` sair de sincronia.
+
+O bundle inicial está em ~57 KB gzip, de 60.

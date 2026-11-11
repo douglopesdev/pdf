@@ -1,18 +1,49 @@
 <script lang="ts">
   import { RadioGroup } from 'bits-ui';
-  import Icon, { type IconName } from '../components/Icon.svelte';
-  import Segmented from '../components/Segmented.svelte';
+  import Icon from '../components/Icon.svelte';
   import type { Lang, LangPref, Messages } from '../lib/i18n';
-  import { prefs, type ThemePref } from '../lib/state/preferences.svelte';
+  import { prefs } from '../lib/state/preferences.svelte';
   import { fill } from '../lib/text';
+  import {
+    COLOR_TOKENS,
+    DEFAULT_CUSTOM,
+    cssValue,
+    isHexColor,
+    lowContrastPairs,
+    type ColorToken,
+    type ThemePref,
+  } from '../lib/theme';
 
   let { t, lang, onback }: { t: Messages; lang: Lang; onback: () => void } = $props();
 
-  const themes = $derived<{ value: ThemePref; label: string; icon: IconName }[]>([
-    { value: 'auto', label: t.settings.themeAuto, icon: 'phone' },
-    { value: 'light', label: t.settings.themeLight, icon: 'sun' },
-    { value: 'dark', label: t.settings.themeDark, icon: 'moon' },
+  const themes = $derived<{ value: ThemePref; label: string }[]>([
+    { value: 'auto', label: t.settings.themeAuto },
+    { value: 'light', label: t.settings.themeLight },
+    { value: 'dark', label: t.settings.themeDark },
+    { value: 'pink', label: t.settings.themePink },
+    { value: 'blue', label: t.settings.themeBlue },
+    { value: 'green', label: t.settings.themeGreen },
+    { value: 'purple', label: t.settings.themePurple },
+    { value: 'orange', label: t.settings.themeOrange },
+    { value: 'custom', label: t.settings.themeCustom },
   ]);
+
+  /** 'line-strong' → a chave 'lineStrong' das traduções. */
+  function colorName(token: ColorToken): string {
+    const key = token.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
+    return t.settings.colors[key as keyof Messages['settings']['colors']];
+  }
+
+  /** As cores do tema personalizado, como variáveis CSS para a amostra dele. */
+  const customStyle = $derived(
+    COLOR_TOKENS.map((token) => `--${token}: ${cssValue(token, prefs.custom[token])}`).join('; '),
+  );
+
+  const lowContrast = $derived(
+    lowContrastPairs(prefs.custom)
+      .map(([text, back]) => `${colorName(text)} / ${colorName(back)}`)
+      .join(', '),
+  );
 
   const languages = $derived<{ value: LangPref; label: string; sub?: string }[]>([
     {
@@ -29,8 +60,28 @@
   // Aberto pelo ícone da tela inicial (PWA instalado, Fase 3).
   const installed = matchMedia('(display-mode: standalone)').matches;
 
-  function setTheme(theme: ThemePref): void {
+  function setTheme(value: string): void {
+    const theme = value as ThemePref;
+    // Na primeira vez, o tema personalizado parte das cores que estão na tela.
+    if (theme === 'custom' && COLOR_TOKENS.every((k) => prefs.custom[k] === DEFAULT_CUSTOM[k])) {
+      const current = getComputedStyle(document.documentElement);
+      for (const token of COLOR_TOKENS) {
+        const color = current.getPropertyValue(`--${token}`).trim();
+        if (isHexColor(color)) prefs.custom[token] = color.toLowerCase();
+      }
+    }
     prefs.theme = theme;
+    prefs.save();
+  }
+
+  function setColor(token: ColorToken, color: string): void {
+    if (!isHexColor(color)) return;
+    prefs.custom[token] = color.toLowerCase();
+    prefs.save();
+  }
+
+  function resetColors(): void {
+    prefs.custom = { ...DEFAULT_CUSTOM };
     prefs.save();
   }
 
@@ -49,9 +100,61 @@
   </header>
 
   <section class="group">
-    <span class="field-label">{t.settings.theme}</span>
-    <Segmented value={prefs.theme} options={themes} label={t.settings.theme} onchange={setTheme} />
+    <span class="field-label" id="theme-label">{t.settings.theme}</span>
+    <RadioGroup.Root
+      class="themes"
+      aria-labelledby="theme-label"
+      value={prefs.theme}
+      onValueChange={setTheme}
+    >
+      {#each themes as option (option.value)}
+        <RadioGroup.Item class="theme" value={option.value}>
+          <!-- Cada amostra carrega o próprio data-theme, então usa os tokens daquele tema. -->
+          {#if option.value === 'auto'}
+            <span class="swatch split" aria-hidden="true">
+              <span class="half" data-theme="light"><span class="chip"></span></span>
+              <span class="half" data-theme="dark"><span class="chip"></span></span>
+            </span>
+          {:else if option.value === 'custom'}
+            <span class="swatch" style={customStyle} aria-hidden="true">
+              <span class="chip"></span>
+            </span>
+          {:else}
+            <span class="swatch" data-theme={option.value} aria-hidden="true">
+              <span class="chip"></span>
+            </span>
+          {/if}
+          {option.label}
+        </RadioGroup.Item>
+      {/each}
+    </RadioGroup.Root>
   </section>
+
+  {#if prefs.theme === 'custom'}
+    <section class="group">
+      <span class="field-label">{t.settings.customTitle}</span>
+      <p class="hint">{t.settings.customHint}</p>
+      <ul class="colors">
+        {#each COLOR_TOKENS as token (token)}
+          <li>
+            <label>
+              <span>{colorName(token)}</span>
+              <input
+                type="color"
+                value={prefs.custom[token]}
+                oninput={(event) => setColor(token, event.currentTarget.value)}
+              />
+            </label>
+          </li>
+        {/each}
+      </ul>
+      <!-- A região existe sempre, para o leitor de tela anunciar quando o aviso chega. -->
+      <p class="warning" role="status">
+        {#if lowContrast}{fill(t.settings.lowContrast, { pairs: lowContrast })}{/if}
+      </p>
+      <button class="btn" type="button" onclick={resetColors}>{t.settings.customReset}</button>
+    </section>
+  {/if}
 
   <section class="group">
     <span class="field-label" id="lang-label">{t.settings.language}</span>
@@ -99,6 +202,114 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .group :global(.themes) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .group :global(.theme) {
+    min-height: 84px;
+    padding: 8px 6px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .group :global(.theme[data-state='checked']) {
+    border-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+
+  .swatch {
+    width: 100%;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .swatch.split {
+    grid-template-columns: 1fr 1fr;
+    place-items: stretch;
+  }
+
+  .half {
+    background: var(--bg);
+    display: grid;
+    place-items: center;
+  }
+
+  .chip {
+    width: 55%;
+    height: 12px;
+    border-radius: 6px;
+    background: var(--btn);
+  }
+
+  .hint {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .colors {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+
+  .colors li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .colors label {
+    min-height: 56px;
+    padding: 6px 8px 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  input[type='color'] {
+    flex-shrink: 0;
+    width: 56px;
+    height: var(--tap);
+    padding: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    cursor: pointer;
+  }
+
+  .warning {
+    font-size: 14px;
+    line-height: 1.45;
+    font-weight: 600;
+    color: var(--danger);
+  }
+
+  .warning:empty {
+    display: none;
   }
 
   .group :global(.radios) {
