@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import type { Messages } from '../lib/i18n';
   import type { PageItem } from '../lib/state/session.svelte';
   import { fill } from '../lib/text';
@@ -35,6 +36,7 @@
 
   // HEIC e arquivos estranhos não têm miniatura no Chrome.
   let broken = $state(false);
+  let handle = $state<HTMLButtonElement>();
 
   const quarter = $derived(page.rotation === 90 || page.rotation === 270);
 
@@ -48,6 +50,8 @@
     if (delta === 0) return;
     event.preventDefault();
     onstep(delta);
+    // Mudar o cartão de lugar no DOM tira o foco: devolve, para seguir movendo.
+    void tick().then(() => handle?.focus());
   }
 </script>
 
@@ -60,6 +64,7 @@
   <button
     class="thumb"
     type="button"
+    bind:this={handle}
     aria-label={fill(t.arrange.move, { n: number })}
     onpointerdown={ongrab}
     oncontextmenu={(event) => event.preventDefault()}
