@@ -95,6 +95,10 @@ export const ptBR = {
     installed: 'Instalado na tela inicial',
     version: 'PDF {v}',
   },
+  update: {
+    available: 'Nova versão disponível',
+    apply: 'Atualizar',
+  },
   toast: {
     limit: 'Limite de {n} imagens por PDF. As demais ficaram de fora.',
     noImages: 'Nenhuma imagem pôde ser lida. Tente outras fotos.',
