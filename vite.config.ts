@@ -79,6 +79,13 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable',
           },
+          // Para os "ícones temáticos" do Android 13+: quem pinta é o sistema.
+          {
+            src: 'icons/monochrome-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'monochrome',
+          },
         ],
         // Aparece no Compartilhar da galeria. Veja src/lib/platform/share-target.ts.
         share_target: {

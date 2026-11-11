@@ -5,6 +5,7 @@
   import { MAX_IMAGES } from './lib/core/options';
   import { messages, resolveLang } from './lib/i18n';
   import { takeSharedFiles } from './lib/platform/share-target';
+  import { applyTheme, syncChrome } from './lib/platform/theme-dom';
   import { prefs } from './lib/state/preferences.svelte';
   import { session, type ToastKind } from './lib/state/session.svelte';
   import { appUpdate } from './lib/state/update.svelte';
@@ -23,9 +24,14 @@
   });
 
   $effect(() => {
-    const root = document.documentElement;
-    if (prefs.theme === 'auto') delete root.dataset.theme;
-    else root.dataset.theme = prefs.theme;
+    applyTheme(prefs.theme, $state.snapshot(prefs.custom));
+  });
+
+  // No tema automático, a barra de status e o ícone da aba seguem o sistema.
+  $effect(() => {
+    const system = matchMedia('(prefers-color-scheme: dark)');
+    system.addEventListener('change', syncChrome);
+    return () => system.removeEventListener('change', syncChrome);
   });
 
   onMount(() => {

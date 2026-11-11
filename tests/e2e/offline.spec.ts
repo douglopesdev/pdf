@@ -115,7 +115,7 @@ test('manifest instalável, com share target para imagens', async ({ page, reque
   const sizes = manifest.icons.map((icon: { sizes: string; purpose?: string }) =>
     icon.purpose ? `${icon.sizes} ${icon.purpose}` : icon.sizes,
   );
-  expect(sizes).toEqual(['192x192', '512x512', '512x512 maskable']);
+  expect(sizes).toEqual(['192x192', '512x512', '512x512 maskable', '512x512 monochrome']);
   for (const icon of manifest.icons as { src: string }[]) {
     const response = await request.get(new URL(icon.src, new URL(href ?? '', page.url())).href);
     expect(response.ok(), icon.src).toBe(true);

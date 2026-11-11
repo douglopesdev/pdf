@@ -1,8 +1,31 @@
 /*
- * Tokens de tema (mesmos valores dos mockups).
- * Claro é o padrão; o escuro vem do sistema ou de data-theme="dark".
+ * Tokens de tema. Nenhuma tela usa cor direta: só estes nomes.
+ *
+ * Cada tema é uma lista de valores para os mesmos tokens, escolhida por
+ * data-theme. O atributo vale no <html> e em qualquer elemento (é assim que
+ * as amostras das Configurações mostram as cores de cada tema). Sem
+ * data-theme, vale o claro ou o escuro do sistema.
+ *
+ * O tema "custom" não tem lista aqui: parte do claro, e as cores escolhidas
+ * pelo usuário entram por cima (src/lib/platform/theme-dom.ts e
+ * public/theme-init.js).
+ *
+ * Tema novo: acrescente a lista abaixo, o nome em THEMES (src/lib/theme.ts)
+ * e em public/theme-init.js. Os testes cobram contraste AA de todos.
  */
 :root {
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --tap: 44px;
+  --gutter: 20px;
+}
+
+:root,
+[data-theme='light'] {
   --bg: #ffffff;
   --surface: #f4f4f5;
   --ink: #0a0a0a;
@@ -15,21 +38,13 @@
   --ok-bg: #dcfce7;
   --danger: #b4232c;
   --scrim: rgb(10 10 10 / 0.42);
-
-  --font-display: 'Sora', system-ui, sans-serif;
-  --font-body: 'Manrope', system-ui, sans-serif;
-
-  --radius-sm: 10px;
-  --radius: 14px;
-  --radius-lg: 20px;
-  --tap: 44px;
-  --gutter: 20px;
-
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme]) {
     --bg: #0a0a0a;
     --surface: #18181b;
     --ink: #fafafa;
@@ -42,11 +57,13 @@
     --ok-bg: #052e16;
     --danger: #ff7b82;
     --scrim: rgb(0 0 0 / 0.62);
+    --shadow: 0 6px 24px rgb(0 0 0 / 0.6);
+    --paper-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
 
-:root[data-theme='dark'] {
+[data-theme='dark'] {
   --bg: #0a0a0a;
   --surface: #18181b;
   --ink: #fafafa;
@@ -59,7 +76,99 @@
   --ok-bg: #052e16;
   --danger: #ff7b82;
   --scrim: rgb(0 0 0 / 0.62);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.6);
+  --paper-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
   color-scheme: dark;
+}
+
+[data-theme='pink'] {
+  --bg: #fff5f8;
+  --surface: #ffe4ec;
+  --ink: #3d0a1f;
+  --muted: #7d3f56;
+  --line: #f9c9d8;
+  --line-strong: #eda3bb;
+  --btn: #be185d;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(61 10 31 / 0.42);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color-scheme: light;
+}
+
+[data-theme='blue'] {
+  --bg: #f3f8ff;
+  --surface: #e0edff;
+  --ink: #0b1f3f;
+  --muted: #3f5a85;
+  --line: #c5dbfa;
+  --line-strong: #9dbff0;
+  --btn: #1d4ed8;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(11 31 63 / 0.42);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color-scheme: light;
+}
+
+[data-theme='green'] {
+  --bg: #f3faf5;
+  --surface: #dff3e5;
+  --ink: #0c2a17;
+  --muted: #3d6650;
+  --line: #c2e3cd;
+  --line-strong: #96cba8;
+  --btn: #15803d;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(12 42 23 / 0.42);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color-scheme: light;
+}
+
+[data-theme='purple'] {
+  --bg: #f8f5ff;
+  --surface: #ebe3ff;
+  --ink: #24104a;
+  --muted: #5d4788;
+  --line: #d9cbfa;
+  --line-strong: #bba6f0;
+  --btn: #6d28d9;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(36 16 74 / 0.42);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color-scheme: light;
+}
+
+[data-theme='orange'] {
+  --bg: #fff8f1;
+  --surface: #ffe9d2;
+  --ink: #3a1a04;
+  --muted: #7d5230;
+  --line: #f9d3ad;
+  --line-strong: #eeb47f;
+  --btn: #c2410c;
+  --btn-ink: #ffffff;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --danger: #b4232c;
+  --scrim: rgb(58 26 4 / 0.42);
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color-scheme: light;
 }
 
 *,
@@ -120,23 +229,6 @@ h3 {
 }
 
 /* ── Peças comuns às telas ─────────────────────────────────────────────── */
-
-:root {
-  --shadow: 0 6px 24px rgb(0 0 0 / 0.18);
-  --paper-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --shadow: 0 6px 24px rgb(0 0 0 / 0.6);
-    --paper-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
-  }
-}
-
-:root[data-theme='dark'] {
-  --shadow: 0 6px 24px rgb(0 0 0 / 0.6);
-  --paper-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
-}
 
 h1,
 h2,

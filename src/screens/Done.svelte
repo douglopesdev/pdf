@@ -241,9 +241,9 @@
     color: var(--muted);
   }
 
+  /* Sem opacidade: nos temas coloridos, texto translúcido perde o contraste AA. */
   .choice.primary small {
     color: inherit;
-    opacity: 0.75;
   }
 
   .again {
