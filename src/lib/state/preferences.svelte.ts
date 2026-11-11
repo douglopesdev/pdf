@@ -1,3 +1,4 @@
+import { DEFAULT_OPTIONS, type PdfOptions } from '../core/options';
 import type { LangPref } from '../i18n';
 
 export type ThemePref = 'auto' | 'light' | 'dark';
@@ -8,23 +9,39 @@ export const PREFS_KEY = 'pdf.prefs';
 interface StoredPrefs {
   theme: ThemePref;
   lang: LangPref;
+  /** Últimas opções usadas no PDF. */
+  pdf: PdfOptions;
 }
 
-const DEFAULTS: StoredPrefs = { theme: 'auto', lang: 'auto' };
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function parsePdfOptions(raw: unknown): PdfOptions {
+  const data = (raw && typeof raw === 'object' ? raw : {}) as Partial<
+    Record<keyof PdfOptions, unknown>
+  >;
+  return {
+    pageSize: oneOf(data.pageSize, ['a4', 'letter', 'original'], DEFAULT_OPTIONS.pageSize),
+    quality: oneOf(data.quality, ['high', 'medium', 'low'], DEFAULT_OPTIONS.quality),
+    margin: typeof data.margin === 'boolean' ? data.margin : DEFAULT_OPTIONS.margin,
+    autoOrient: typeof data.autoOrient === 'boolean' ? data.autoOrient : DEFAULT_OPTIONS.autoOrient,
+  };
+}
 
 export function parsePrefs(raw: string | null): StoredPrefs {
-  if (!raw) return { ...DEFAULTS };
+  let data: Partial<Record<keyof StoredPrefs, unknown>> = {};
   try {
-    const data = JSON.parse(raw) as Partial<Record<keyof StoredPrefs, unknown>>;
-    const theme = data.theme;
-    const lang = data.lang;
-    return {
-      theme: theme === 'light' || theme === 'dark' || theme === 'auto' ? theme : DEFAULTS.theme,
-      lang: lang === 'pt-BR' || lang === 'en' || lang === 'auto' ? lang : DEFAULTS.lang,
-    };
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object') data = parsed;
   } catch {
-    return { ...DEFAULTS };
+    // JSON quebrado: volta tudo para o padrão.
   }
+  return {
+    theme: oneOf(data.theme, ['auto', 'light', 'dark'], 'auto'),
+    lang: oneOf(data.lang, ['auto', 'pt-BR', 'en'], 'auto'),
+    pdf: parsePdfOptions(data.pdf),
+  };
 }
 
 function readStorage(): string | null {
@@ -40,18 +57,23 @@ function readStorage(): string | null {
  * imagens e PDFs nunca são gravados.
  */
 class Preferences {
-  theme = $state<ThemePref>(DEFAULTS.theme);
-  lang = $state<LangPref>(DEFAULTS.lang);
+  theme = $state<ThemePref>('auto');
+  lang = $state<LangPref>('auto');
+  pdf = $state<PdfOptions>({ ...DEFAULT_OPTIONS });
 
   constructor() {
     const stored = parsePrefs(readStorage());
     this.theme = stored.theme;
     this.lang = stored.lang;
+    this.pdf = stored.pdf;
   }
 
   save(): void {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ theme: this.theme, lang: this.lang }));
+      localStorage.setItem(
+        PREFS_KEY,
+        JSON.stringify({ theme: this.theme, lang: this.lang, pdf: this.pdf }),
+      );
     } catch {
       // Sem localStorage (modo restrito): a preferência vale só até fechar o app.
     }
