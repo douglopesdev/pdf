@@ -1,6 +1,9 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+
+const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
 
 /**
  * Content Security Policy aplicada só no build de produção.
@@ -38,6 +41,9 @@ export default defineConfig({
   // Publicado em https://douglopesdev.github.io/pdf/
   base: '/pdf/',
   plugins: [svelte(), cspMeta()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   build: {
     target: 'es2022',
     sourcemap: false,

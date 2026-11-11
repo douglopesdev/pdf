@@ -55,10 +55,20 @@ Antes de cada commit, rode `pnpm format` e depois `pnpm verify`. O CI falha com 
 src/
 ├─ app.css                       tokens claro/escuro, reset, tipografia
 ├─ main.ts                       fontes, CSS, mount
-├─ App.svelte                    idioma, tema e (Fase 2) troca de telas
+├─ App.svelte                    idioma, tema, troca de telas, Voltar do Android, avisos
 ├─ screens/                      uma tela por arquivo
-│  └─ Home.svelte                hoje estática, botões desativados
-├─ components/                   (Fase 2) Button, PageCard, Segmented, Toast…
+│  ├─ Home.svelte                escolher da galeria ou tirar foto
+│  ├─ Arrange.svelte             grade de páginas, arrastar para reordenar, Gerar PDF
+│  ├─ Generating.svelte          anel de progresso e Cancelar
+│  ├─ Done.svelte                compartilhar, salvar, selo de 2 MB
+│  └─ Settings.svelte            tema, idioma, privacidade, versão
+├─ components/
+│  ├─ Icon.svelte                todos os ícones (SVG inline, por nome)
+│  ├─ FileButton.svelte          <label> + <input type="file"> (galeria ou câmera)
+│  ├─ PageCard.svelte            miniatura numerada com Girar e Remover
+│  ├─ OptionsSheet.svelte        folha de ajustes do PDF (Dialog e Switch do Bits UI)
+│  ├─ Segmented.svelte           seletor de 3 opções (ToggleGroup do Bits UI)
+│  └─ Toast.svelte               aviso temporário no rodapé
 ├─ sw.ts                         (Fase 3) service worker
 └─ lib/
    ├─ core/                      lógica pura, sem Svelte nem DOM
@@ -73,13 +83,17 @@ src/
    ├─ worker/
    │  ├─ protocol.ts             tipos das mensagens (a interface importa só daqui)
    │  └─ convert.worker.ts       roda o convert fora da UI; aceita { type: 'cancel' }
+   ├─ text.ts                    fill(), plural(), formatSize(), cleanFileName()
    ├─ state/
-   │  └─ preferences.svelte.ts   tema e idioma; único dado salvo
+   │  ├─ preferences.svelte.ts   tema, idioma e últimas opções do PDF; único dado salvo
+   │  └─ session.svelte.ts       tela atual, páginas, progresso e PDF pronto (nada é salvo)
    ├─ i18n/
    │  ├─ pt-BR.ts                fonte da verdade das chaves; exporta o tipo Messages
    │  ├─ en.ts                   tipado como Messages: faltar chave é erro de compilação
    │  └─ index.ts                resolveLang() e messages()
-   └─ platform/                  (Fase 2/3) share, download, share-target
+   └─ platform/
+      ├─ converter.ts            cria o worker, repassa o progresso e cancela
+      └─ share.ts                Web Share API com arquivo; (Fase 3) share-target
 public/
 ├─ theme-init.js                 aplica o tema salvo antes da primeira pintura
 └─ favicon.svg, robots.txt       robots bloqueia indexação (uso pessoal)
@@ -112,10 +126,10 @@ docs/reference/                  material de referência, fora do build e do lin
 
 | Fase                    | Entrega                                                          | Portão                      | Situação                                                                                                 |
 | ----------------------- | ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | PR #1 aberto, CI verde. Falta o Douglas ativar Settings › Pages › Source: GitHub Actions e fazer o merge |
-| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | PR aberto (`feat/fase-1-nucleo`, em cima da Fase 0). O worker ainda não é usado pela interface           |
-| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Próxima                                                                                                  |
-| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | —                                                                                                        |
+| 0 · Fundação            | Projeto, tokens, fontes, i18n, lint, testes, CI, deploy          | CI verde e site no ar       | Concluída. Na `main`, site no ar                                                                         |
+| 1 · Núcleo de conversão | pdf-writer, EXIF, raster no worker, layout                       | 6 formatos geram PDF válido | Concluída. Na `main`                                                                                     |
+| 2 · Interface           | As 6 telas, Bits UI, temas, pt-BR e en                           | Fluxo igual aos mockups     | Branch `feat/fase-2-interface` enviada. Falta testar o toque (arrastar, câmera, Compartilhar) no Android |
+| 3 · PWA e Android       | Manifest, service worker, offline, share target, aviso de versão | Instala e abre offline      | Próxima                                                                                                  |
 | 4 · Aparelhos e v1.0    | Playwright, Lighthouse, TalkBack, testes nos 4 telefones, tag    | Metas atingidas no A26      | —                                                                                                        |
 
 ## Fase 1 · Núcleo de conversão (especificação)
@@ -164,7 +178,7 @@ Tamanhos em pontos: A4 = 595,28 × 841,89 e Carta = 612 × 792. Com `autoOrient`
 
 ## Fase 2 · Interface (especificação)
 
-As telas seguem os mockups (canvas no claude.ai do Douglas: "PDF · Mockups"). Fluxo:
+As telas seguem os mockups (canvas no claude.ai do Douglas: "Vira PDF · Mockups"; o nome do app continua sendo PDF). Fluxo:
 
 1. **Início:** "Escolher da galeria" (`<input type="file" accept="image/*" multiple>`) e "Tirar foto" (`capture="environment"`), formatos aceitos, dica do atalho pela galeria e rodapé "Funciona offline". Botão de engrenagem abre as Configurações.
 2. **Organizar:** grade de 2 colunas com miniaturas numeradas; cada página tem os botões Girar e Remover; arrastar para reordenar (pointer events, funcionando no toque); botão Adicionar; resumo das opções (abre a folha de ajustes) e "Gerar PDF".
@@ -173,7 +187,13 @@ As telas seguem os mockups (canvas no claude.ai do Douglas: "PDF · Mockups"). F
 5. **Pronto:** nome, número de páginas e tamanho do arquivo; selo verde "Cabe no limite de 2 MB" quando for o caso (senão, sugerir a qualidade Leve); "Compartilhar" (Web Share API com `files`, só aparece se `navigator.canShare({ files })`) e "Salvar em Downloads" (link com `download`); "Converter outras imagens"; aviso de que o app não guarda o PDF.
 6. **Configurações:** Tema (Automático / Claro / Escuro), Idioma (Automático / Português (Brasil) / English), card de privacidade e versão.
 
-Ao entrar nesta fase, tire o selo "Em construção" e os `disabled` dos botões da Início.
+Notas da implementação:
+
+- Reordenar: no toque, segurar ~0,3 s e arrastar; com o mouse, só arrastar; no teclado, setas com a miniatura em foco. A ordem muda ao soltar.
+- O Voltar do Android volta uma tela (uma entrada no histórico enquanto o app está fora da Início) e sair com páginas escolhidas pede confirmação.
+- Depois de "Pronto", fechar ou "Converter outras imagens" descarta as páginas e o PDF.
+- Acima de 2 MB, a tela Pronto oferece "Gerar de novo em Leve".
+- O bundle inicial ficou em ~51 KB gzip (limite de 60). O Bits UI é a maior parte: cuidado ao importar mais componentes dele.
 
 ## Fase 3 · PWA e Android (resumo)
 
